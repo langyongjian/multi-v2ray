@@ -30,12 +30,13 @@ help(){
     echo "  log                  查看 V2Ray 运行日志"
     echo "  update               更新 V2Ray"
     echo "  update.sh            更新 multi-v2ray脚本"
-    echo "  add                  新增mkcp + 随机一种 (srtp | wechat-video | utp) header伪装的端口(Group)"
-    echo "  add [wechat|utp|srtp|dtls|socks|mtproto|ss]     新增一种协议的组，端口随机,如 v2ray add utp 为新增utp协议"
+    echo "  add                  新增mkcp + 随机一种 (srtp | wechat-video | utp | dtls) header伪装的端口(Group)"
+    echo "  add [wechat|utp|srtp|dtls|wireguard|socks|mtproto|ss]     新增一种协议的组，端口随机,如 v2ray add utp 为新增utp协议"
     echo "  del                  删除端口组"
     echo "  info                 查看配置"
     echo "  port                 修改端口"
     echo "  tls                  修改tls"
+    echo "  tfo                  修改tcpFastOpen"
     echo "  stream               修改传输协议"
     echo "  stats                流量统计"
     echo "  clean                清理日志"
@@ -78,15 +79,20 @@ while [[ $# > 0 ]];do
         source <(curl -sL https://git.io/fNgqx) -k
         ;;
         info)
-        python3 /usr/local/multi-v2ray/server_info.py
+        python3 -c "from loader import Loader; print(Loader().profile);"
         ;;
         port)
         python3 /usr/local/multi-v2ray/config_modify/port.py
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 -c "from utils import open_port; open_port();"
+
 	    service v2ray restart
         ;;
         tls)
         python3 /usr/local/multi-v2ray/config_modify/tls.py
+	    service v2ray restart
+        ;;
+        tfo)
+        python3 /usr/local/multi-v2ray/config_modify/tfo.py
 	    service v2ray restart
         ;;
         stream)
@@ -106,7 +112,7 @@ while [[ $# > 0 ]];do
         add)
         EXTRA="$2"
         python3 /usr/local/multi-v2ray/user_manage/create_new_port.py $EXTRA
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 -c "from utils import open_port; open_port();"
         service v2ray restart
         shift
         ;;
@@ -163,7 +169,7 @@ if [[ ${CHOICE} == 1 ]]; then
     done
     if [[ ${SERVICE_CHOICE} == 1 ]]; then
         service v2ray start
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 -c "from utils import open_port; open_port();"
         echo "服务启动成功！"
         bash /usr/local/bin/v2ray
     fi
@@ -174,7 +180,7 @@ if [[ ${CHOICE} == 1 ]]; then
     fi
     if [[ ${SERVICE_CHOICE} == 3 ]]; then
         service v2ray restart
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 -c "from utils import open_port; open_port();"
         echo "服务已重启！"
         bash /usr/local/bin/v2ray
     fi
@@ -217,7 +223,7 @@ if [[ ${CHOICE} == 2 ]]; then
     fi
     if [[ ${USER_CHOICE} == 2 ]]; then
         python3 /usr/local/multi-v2ray/user_manage/create_new_port.py
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 -c "from utils import open_port; open_port();"
         service v2ray restart
         echo ""
         bash /usr/local/bin/v2ray
@@ -244,14 +250,15 @@ if [[ ${CHOICE} == 3 ]]; then
     echo -e "4.更改主端口\n"
     echo -e "5.更改传输方式\n"
     echo -e "6.更改TLS设置\n"
-    echo -e "7.更改广告拦截功能\n"
-    echo -e "8.更改动态端口\n"
-    echo -e "9.更改Shadowsocks加密方式\n"
-    echo -e "10.更改Shadowsocks密码\n"
+    echo -e "7.更改tcpFastOpen设置\n"
+    echo -e "8.更改广告拦截功能\n"
+    echo -e "9.更改动态端口\n"
+    echo -e "10.更改Shadowsocks加密方式\n"
+    echo -e "11.更改Shadowsocks密码\n"
 
     while :; do echo
 	    read -p "请输入数字选择功能： " CONFIG_CHOICE
-	    if [[ ! $CONFIG_CHOICE =~ (^[1-9]$|10) ]]; then
+	    if [[ ! $CONFIG_CHOICE =~ (^[1-9]$|10|11) ]]; then
             if [[ -z ${CONFIG_CHOICE} ]];then
                 bash /usr/local/bin/v2ray
                 exit 0
@@ -286,7 +293,7 @@ if [[ ${CHOICE} == 3 ]]; then
     
     if [[ ${CONFIG_CHOICE} == 4 ]]; then
         python3 /usr/local/multi-v2ray/config_modify/port.py
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 -c "from utils import open_port; open_port();"
 	    service v2ray restart
         echo ""
         bash /usr/local/bin/v2ray
@@ -307,6 +314,13 @@ if [[ ${CHOICE} == 3 ]]; then
     fi
 
     if [[ ${CONFIG_CHOICE} == 7 ]]; then
+        python3 /usr/local/multi-v2ray/config_modify/tfo.py
+	    service v2ray restart
+        echo ""
+        bash /usr/local/bin/v2ray
+    fi
+
+    if [[ ${CONFIG_CHOICE} == 8 ]]; then
         python3 /usr/local/multi-v2ray/config_modify/ad.py
 	    service v2ray restart
         echo ""
@@ -314,21 +328,21 @@ if [[ ${CHOICE} == 3 ]]; then
         bash /usr/local/bin/v2ray
     fi
 
-    if [[ ${CONFIG_CHOICE} == 8 ]]; then
+    if [[ ${CONFIG_CHOICE} == 9 ]]; then
         python3 /usr/local/multi-v2ray/config_modify/dyn_port.py
 	    service v2ray restart
         echo ""
         bash /usr/local/bin/v2ray
     fi
 
-    if [[ ${CONFIG_CHOICE} == 9 ]]; then
+    if [[ ${CONFIG_CHOICE} == 10 ]]; then
         python3 /usr/local/multi-v2ray/config_modify/ss.py method
 	    service v2ray restart
         echo ""
         bash /usr/local/bin/v2ray
     fi
 
-    if [[ ${CONFIG_CHOICE} == 10 ]]; then
+    if [[ ${CONFIG_CHOICE} == 11 ]]; then
         python3 /usr/local/multi-v2ray/config_modify/ss.py password
 	    service v2ray restart
         echo ""
@@ -337,7 +351,7 @@ if [[ ${CHOICE} == 3 ]]; then
 fi
 
 if [[ ${CHOICE} == 4 ]]; then
-    python3 /usr/local/multi-v2ray/server_info.py
+    python3 -c "from loader import Loader; print(Loader().profile);"
     bash /usr/local/bin/v2ray
 fi
 
@@ -392,6 +406,6 @@ if [[ ${CHOICE} == 6 ]]; then
 fi
 
 if [[ ${CHOICE} == 7 ]]; then
-    python3 /usr/local/multi-v2ray/base_util/gen_client.py
+    python3 /usr/local/multi-v2ray/client.py
     bash /usr/local/bin/v2ray
 fi

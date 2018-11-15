@@ -17,6 +17,9 @@ HELP=""
 
 REMOVE=""
 
+#centos 临时取消别名
+[ -f /etc/redhat-release ] && unalias -a
+
 #######color code########
 RED="31m"      # Error message
 GREEN="32m"    # Success message
@@ -96,8 +99,8 @@ removeV2Ray() {
         service cron restart >/dev/null 2>&1
     fi
 
-    #删除multi-v2ray模块搜索路径
-    sed -i '/multi-v2ray/d' ~/.bashrc
+    #删除multi-v2ray环境变量
+    sed -i '/v2ray/d' ~/.bashrc
     source ~/.bashrc
 
     colorEcho ${GREEN} "卸载完成！"
@@ -117,14 +120,14 @@ checkSys() {
 
     #检查系统信息
     if [ -f /etc/redhat-release ];then
-            OS='CentOS'
-        elif [ ! -z "`cat /etc/issue | grep bian`" ];then
-            OS='Debian'
-        elif [ ! -z "`cat /etc/issue | grep Ubuntu`" ];then
-            OS='Ubuntu'
-        else
-            colorEcho ${RED} "Not support OS, Please reinstall OS and retry!"
-            exit 1
+        OS='CentOS'
+    elif [ ! -z "`cat /etc/issue | grep bian`" ];then
+        OS='Debian'
+    elif [ ! -z "`cat /etc/issue | grep Ubuntu`" ];then
+        OS='Ubuntu'
+    else
+        colorEcho ${RED} "Not support OS, Please reinstall OS and retry!"
+        exit 1
     fi
 }
 
@@ -132,11 +135,16 @@ checkSys() {
 installDependent(){
     if [[ ${OS} == 'CentOS' ]];then
         yum install epel-release curl wget unzip git ntp ntpdate socat crontabs lsof -y
-        yum install python34 -y
+        [[ -z $(rpm -qa|grep python3) ]] && yum install python34 -y
     else
         apt-get update
-        apt-get install curl unzip git ntp wget ntpdate python3 socat cron lsof -y
+        apt-get install curl unzip git ntp wget ntpdate socat cron lsof -y
+        [[ -z $(dpkg -l|grep python3) ]] && apt-get install python3 -y
     fi
+
+    # 安装 pip依赖
+    python3 <(curl -sL https://bootstrap.pypa.io/get-pip.py)
+    pip3 install pyopenssl
 }
 
 #设置定时升级任务
@@ -191,6 +199,10 @@ updateProject() {
     fi
     [[ "${INSTARLL_WAY}" != "0" ]] && mv -f ~/my_domain .
 
+    #更新v2ray bash_completion脚本
+    cp -f /usr/local/multi-v2ray/v2ray.bash /etc/bash_completion.d/
+    source /etc/bash_completion.d/v2ray.bash
+    
     #安装/更新V2ray主程序
     bash <(curl -L -s https://install.direct/go.sh)
 }
@@ -220,6 +232,9 @@ profileInit() {
     #加入multi-v2ray模块搜索路径
     [[ -z $(grep multi-v2ray ~/.bashrc) ]] && echo "export PYTHONPATH=$PYTHONPATH:/usr/local/multi-v2ray" >> ~/.bashrc && source ~/.bashrc
 
+    # 加入v2ray tab补全环境变量
+    [[ -z $(grep v2ray.bash ~/.bashrc) ]] && echo "source /etc/bash_completion.d/v2ray.bash" >> ~/.bashrc && source ~/.bashrc
+
     #解决Python3中文显示问题
     [[ -z $(grep PYTHONIOENCODING=utf-8 ~/.bashrc) ]] && echo "export PYTHONIOENCODING=utf-8" >> ~/.bashrc && source ~/.bashrc
 
@@ -237,10 +252,10 @@ profileInit() {
         sed -i "s/999999999/${D_PORT}/g" /etc/v2ray/config.json
 
         #产生默认配置mkcp+随机3种伪装类型type
-        python3 /usr/local/multi-v2ray/base_util/random_stream.py
+        python3 -c "from config_modify import stream; stream.StreamModifier().random_kcp();"
 
-        python3 /usr/local/multi-v2ray/base_util/gen_client.py
-        python3 /usr/local/multi-v2ray/base_util/open_port.py
+        python3 /usr/local/multi-v2ray/client.py
+        python3 -c "from utils import open_port; open_port();"
     fi
 }
 
@@ -255,7 +270,7 @@ installFinish() {
 
     echo "V2ray配置信息:"
     #安装完后显示v2ray的配置信息，用于快速部署
-    python3 /usr/local/multi-v2ray/server_info.py
+    python3 -c "from loader import Loader; print(Loader().profile);"
 
     echo -e "输入 v2ray 回车即可进行服务管理\n"
 }
@@ -281,8 +296,6 @@ main() {
         #设置定时任务
         [[ -z $(crontab -l|grep v2ray) ]] && planUpdate
 
-        #安装 acme.sh 以自动获取SSL证书
-        curl  https://get.acme.sh | sh
     fi
 
     updateProject

@@ -28,6 +28,7 @@ V2ray多用户管理脚本，向导式管理[新增|删除|修改]传输协议�
 - 查看配置信息显示vmess字符串(v2rayN的分享链接格式)
 - 生成**Telegram**的socks5/MTProto分享链接, 支持socks5 + tls组合
 - 支持http/2, 随机生成伪装h2 path
+- 开启关闭tcpFastOpen
 - 开启关闭动态端口
 - 支持程序和**命令行参数**管理控制
 
@@ -37,6 +38,7 @@ V2ray多用户管理脚本，向导式管理[新增|删除|修改]传输协议�
 - 命令行模式管理v2ray
 - 支持多用户， 多端口管理
 - 开启关闭动态端口
+- 开启关闭tcpFastOpen
 - 快速查看服务器连接信息, 常规配置修改
 - 自由更改**传输配置**：
   - 常规TCP
@@ -47,6 +49,7 @@ V2ray多用户管理脚本，向导式管理[新增|删除|修改]传输协议�
   - mKCP 伪装 BT下载流量(utp)
   - mKCP 伪装 微信视频通话流量(wechat-video)
   - mKCP 伪装 DTLS 1.2流量(dtls)
+  - mKCP 伪装 WireGuard流量(wireguard)
   - HTTP/2的tls流量(h2)(需备域名) 
   - Socks5
   - MTProto
@@ -70,7 +73,8 @@ source <(curl -sL https://git.io/fNgqx) -k
 source <(curl -sL https://git.io/fNgqx) --remove
 ```
 
-## 命令行参数
+## 命令行参数  
+所有命令行参数支持**Tab**补全  
 ```bash
    v2ray -h                   查看帮助
    v2ray start                启动 V2Ray
@@ -81,11 +85,12 @@ source <(curl -sL https://git.io/fNgqx) --remove
    v2ray update               更新 V2Ray
    v2ray update.sh            更新 multi-v2ray脚本
    v2ray add                  新增mkcp + 随机一种 (srtp | wechat-video | utp) header伪装的端口(Group)
-   v2ray add [wechat|utp|srtp|dtls|socks|mtproto|ss]     新增一种协议的组，端口随机,如 v2ray add utp 为新增utp协议
+   v2ray add [wechat|utp|srtp|dtls|wireguard|socks|mtproto|ss]     新增一种协议的组，端口随机,如 v2ray add utp 为新增utp协议
    v2ray del                  删除端口组
    v2ray info                 查看配置
    v2ray port                 修改端口
    v2ray tls                  修改tls
+   v2ray tfo                  修改tcpFastOpen
    v2ray stream               修改传输协议
    v2ray stats                流量统计
    v2ray clean                清理日志
@@ -115,6 +120,21 @@ source <(curl -sL https://git.io/fNgqx) --remove
 **不支持Centos 6**
 
 ## 更新日志
+**2018.10.9**  
+面向对象 来重构代码  
+加入json文件缓存(利用序列化实现)
+
+**2018.9.15**  
+tcpFastOpen的配置    
+命令行参数加入Tab补全
+
+**2018.9.1**  
+增加 WireGuard header type
+
+**2018.8.26**  
+脚本加入pip安装  
+tls设置支持自定义证书路径
+
 **2018.7.29**  
 支持Shadowsocks
 
